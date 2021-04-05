@@ -2,6 +2,10 @@
  * RC-S620/S sample library for Arduino
  *
  * Copyright 2010 Sony Corporation
+ *
+ * Last Modified Date: 2018-03-16
+ * Last Modified By: KLab Inc.
+ *
  */
 
 #include <stdio.h>
@@ -95,10 +99,131 @@ int RCS620S::polling(uint16_t systemCode)
         (memcmp(response, "\xd5\x4b\x01\x01\x12\x01", 6) != 0)) {
         return 0;
     }
-
+    this->piccType = PICC_FELICA;
+    this->idLength = 8;
     memcpy(this->idm, response + 6, 8);
     memcpy(this->pmm, response + 14, 8);
 
+    return 1;
+}
+
+// FeliCa
+int RCS620S::polling_felica(uint16_t systemCode)
+{
+    return polling(systemCode);
+}
+
+// ISO/IEC 14443 Type A
+int RCS620S::polling_typeA()
+{
+    int ret;
+    uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
+    uint16_t responseLen;
+
+    this->piccType = PICC_UNKNOWN;
+
+    // "PN532 User Manual Rev.02" (by NXP) - 7.3.5 InListPassiveTarget
+    ret = rwCommand((const uint8_t *)"\xd4\x4a\x01\x00", 4, response, &responseLen);
+
+    if (!ret || (responseLen < 12) ||
+        (memcmp(response, "\xd5\x4b\x01\x01\x00", 5) != 0)) {
+        return 0;
+    }
+
+    // "MIFARE Type Identification Procedure Rev. 3.6"
+    //   - 3. Chip Type Identification Procedure
+    piccType = PICC_ISO_IEC14443_TypeA_MIFARE;
+    if (memcmp(&response[4], "\x00\x44", 2) == 0 &&
+        response[6] == 0x00 &&
+        response[7] == 0x07) {
+        piccType = PICC_ISO_IEC14443_TypeA_MIFAREUL;
+    }
+    this->idLength = response[7];
+    memcpy(this->idm, response+8, this->idLength);
+    return 1;
+}
+
+// ISO/IEC 14443 Type B を捕捉
+int RCS620S::polling_typeB()
+{
+    int ret;
+    uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
+    uint16_t responseLen;
+
+    // "PN532 User Manual Rev.02" (by NXP) - 7.3.5 
+    // page 121 of 200
+    // "In the second example, the host requires the initialization of
+    //  one ISO/IEC14443-3B card with the default parameters (AFI = 0x00)."
+    // => D4 4A 01 03 00 (deterministic approach)
+    // つまりデフォルトで末尾に 0x00 が必要
+    //memcpy(buf, "\xd4\x4a\x01\x03", 4);
+    //ret = rwCommand(buf, 4, response, &responseLen);
+    ret = rwCommand((const uint8_t*)"\xd4\x4a\x01\x03\x00", 5, response, &responseLen);
+
+    if (responseLen <= 3 && (response[0] == 0x7F || response[2] == 0x00)) {
+        return 0;
+    }
+
+    if (!ret || responseLen < 18 ||
+        memcmp(response, "\xd5\x4b\x01\x01", 4) != 0) {
+        return 0;
+    }
+    this->piccType = PICC_ISO_IEC14443_TypeB;
+    // "ISO/IEC 14443-3 Part3: Initialization and anticollision"
+    //  - 7.9 ATQB Response
+    this->idLength = 4;
+    memcpy(this->idm, response+5, this->idLength);
+    //memcpy(this->temp, response+4, 14);
+    return 1;
+}
+
+// MIFARE UL NTAG21x なら総ページ数, 非 NTAG21x ならば 0 を返す
+uint8_t RCS620S::getTotalPagesMifareUL(void) {
+    int ret;
+    uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
+    uint16_t responseLen;
+
+    // GET_VERSION command via InCommunicateThru()
+    // "NTAG213/215/216 Product data sheet Rev.3.2" - 10.1 GET_VERSION
+    // "PN532 User Manual Rev.02" - 7.3.9 InCommunicateThru
+    ret = rwCommand((const uint8_t*)"\xd4\x42\x60", 3,
+                    response, &responseLen);
+    // 非 NTAG21x
+    if (!ret || (responseLen != 11) ||
+        (memcmp(response, "\xd5\x43", 2) != 0)) {
+        return 0;
+    }
+    // NTAG21x ならページ総数を返す
+    uint8_t StorageSize = response[9];
+    return  (StorageSize == 0x0F) ?  TOTALPAGES_NTAG213 :
+            (StorageSize == 0x11) ?  TOTALPAGES_NTAG215 :
+            (StorageSize == 0x13) ?  TOTALPAGES_NTAG216 :  0;
+}
+
+// MIFARE UL メモリ 4 ページ分を読み出す
+int RCS620S::readMifareUL(uint8_t startPage, uint8_t *buf, uint8_t *size)
+{
+    int ret;
+    uint16_t len;
+    if (!buf || *size < 20) {
+        return 0;
+    }
+
+    // READ command via InDataExchange()
+    // "NTAG213/215/216 Product data sheet Rev.3.2" - 10.2 READ
+    // "PN532 User Manual Rev.02" - 7.3.8 InDataExchange
+    memcpy(buf, "\xd4\x40\x01\x30", 4);
+    buf[4] = startPage;
+    ret = rwCommand(buf, 5, buf, &len);
+
+    if (!ret || len <= 3 ||
+        memcmp(buf, "\xd5\x41", 2) != 0) {
+        *size = (uint8_t)len;
+        return 0;
+    }
+    // ヘッダを除去
+    memmove(buf, &buf[3], len-3);
+    *size = (uint8_t)(len-3);
     return 1;
 }
 

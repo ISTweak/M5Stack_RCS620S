@@ -2,12 +2,27 @@
  * RC-S620/S sample library for Arduino
  *
  * Copyright 2010 Sony Corporation
+ *
+ * Last Modified Date: 2018-03-16
+ * Last Modified By: KLab Inc.
+ *
  */
 
 #include <inttypes.h>
 
 #ifndef RCS620S_H_
 #define RCS620S_H_
+
+enum PICC_TYPE {
+    PICC_UNKNOWN = 0,
+    PICC_FELICA,
+    PICC_ISO_IEC14443_TypeA_MIFARE,
+    PICC_ISO_IEC14443_TypeA_MIFAREUL,
+    PICC_ISO_IEC14443_TypeB
+};
+#define TOTALPAGES_NTAG213   45 // 0x2D
+#define TOTALPAGES_NTAG215  135 // 0x87
+#define TOTALPAGES_NTAG216  231 // 0xE7
 
 /* --------------------------------
  * Constant
@@ -27,6 +42,11 @@ public:
 
     int initDevice(void);
     int polling(uint16_t systemCode = 0xffff);
+    int polling_felica(uint16_t systemCode = 0xffff);
+    int polling_typeA();
+    int polling_typeB();
+    uint8_t getTotalPagesMifareUL(void);
+    int readMifareUL(uint8_t startPage, uint8_t *buf, uint8_t *size);
     int cardCommand(
         const uint8_t* command,
         uint8_t commandLen,
@@ -63,6 +83,8 @@ public:
     unsigned long timeout;
     uint8_t idm[8];
     uint8_t pmm[8];
+	uint8_t idLength;
+	uint8_t piccType;
 };
 
 #endif /* !RCS620S_H_ */
