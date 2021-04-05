@@ -43,7 +43,7 @@ public:
     int initDevice(void);
 	int initDevice(uint8_t rxd, uint8_t txd);
     int polling(uint16_t systemCode = 0xffff);
-    int polling_felica(uint16_t systemCode = 0xffff);
+    int polling_felica(uint16_t systemCode = 0x0003);
     int polling_typeA();
     int polling_typeB();
     uint8_t getTotalPagesMifareUL(void);

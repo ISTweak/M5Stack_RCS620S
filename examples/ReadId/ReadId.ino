@@ -22,7 +22,7 @@ void loop()
   uint8_t buf[20];
   bool found = false;
   
-  if (rcs620s.polling() || rcs620s.polling_typeA() || rcs620s.polling_typeB()) {
+  if (rcs620s.polling() || rcs620s.polling_felica() || rcs620s.polling_typeA() || rcs620s.polling_typeB()) {
     Serial.print("ID: ");
     for (int i = 0; i < rcs620s.idLength; i++) {
       Serial.print(rcs620s.idm[i], HEX);
