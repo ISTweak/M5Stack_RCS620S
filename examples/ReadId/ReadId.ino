@@ -8,10 +8,10 @@ RCS620S rcs620s;
 void setup() {
   M5.begin();
   int ret;
-  ret = rcs620s.initDevice();
+  ret = rcs620s.initDevice(22, 21);
   Serial.println("Init RCS620s ");
   if (!ret) {
-    while(19);
+    while(1);
   }
   Serial.println("Connect RCS620S");
 }

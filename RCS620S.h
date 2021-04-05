@@ -41,6 +41,7 @@ public:
     RCS620S();
 
     int initDevice(void);
+	int initDevice(uint8_t rxd, uint8_t txd);
     int polling(uint16_t systemCode = 0xffff);
     int polling_felica(uint16_t systemCode = 0xffff);
     int polling_typeA();

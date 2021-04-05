@@ -47,13 +47,17 @@ RCS620S::RCS620S()
     this->timeout = RCS620S_DEFAULT_TIMEOUT;
 }
 
+int RCS620S::initDevice(uint8_t rxd, uint8_t txd)
+{
+	Serial2.begin(115200, SERIAL_8N1, rxd, txd);
+	return initDevice();
+}
+
 int RCS620S::initDevice(void)
 {
     int ret;
     uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
     uint16_t responseLen;
-
-    Serial2.begin(115200, SERIAL_8N1, 16, 17);
 
     /* RFConfiguration (various timings) */
     ret = rwCommand((const uint8_t*)"\xd4\x32\x02\x00\x00\x00", 6,
