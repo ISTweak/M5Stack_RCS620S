@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include "Wprogram.h"
 #include "Print.h"
 #include "HardwareSerial.h"
 
@@ -49,6 +48,8 @@ int RCS620S::initDevice(void)
     int ret;
     uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
     uint16_t responseLen;
+
+    Serial2.begin(115200, SERIAL_8N1, 16, 17);
 
     /* RFConfiguration (various timings) */
     ret = rwCommand((const uint8_t*)"\xd4\x32\x02\x00\x00\x00", 6,
@@ -309,7 +310,7 @@ void RCS620S::writeSerial(
     const uint8_t* data,
     uint16_t len)
 {
-    Serial.write(data, len);
+    Serial2.write(data, len);
 }
 
 int RCS620S::readSerial(
@@ -324,8 +325,8 @@ int RCS620S::readSerial(
             return 0;
         }
 
-        if (Serial.available() > 0) {
-            data[nread] = Serial.read();
+        if (Serial2.available() > 0) {
+            data[nread] = Serial2.read();
             nread++;
         }
     }
@@ -335,7 +336,7 @@ int RCS620S::readSerial(
 
 void RCS620S::flushSerial(void)
 {
-    Serial.flush();
+    Serial2.flush();
 }
 
 int RCS620S::checkTimeout(unsigned long t0)
