@@ -42,6 +42,7 @@ public:
 
     int initDevice(void);
 	int initDevice(uint8_t rxd, uint8_t txd);
+	int tgInitTarget(const uint8_t* idm, const uint8_t* pmm, const uint8_t* rfu);
     int polling(uint16_t systemCode = 0xffff);
     int polling_felica(uint16_t systemCode = 0x0003);
     int polling_typeA();
@@ -58,6 +59,7 @@ public:
     int push(
         const uint8_t* data,
         uint8_t dataLen);
+	int reset(void);
 
 private:
     int rwCommand(

@@ -86,6 +86,34 @@ int RCS620S::initDevice(void)
     return 1;
 }
 
+int RCS620S::tgInitTarget(const uint8_t* idm, const uint8_t* pmm, const uint8_t* rfu)
+{
+	int ret;
+    uint8_t  response[RCS620S_MAX_RW_RESPONSE_LEN];
+    uint16_t responseLen;
+    
+    uint8_t command[RCS620S_MAX_RW_RESPONSE_LEN] = {0x00};
+    uint8_t start[2] = {0xd4, 0x8c}; // command code & sub command code
+    uint8_t activated[1] = {0x02}; // Activated limit
+    uint8_t params106[6] = {0x00, 0x04, 0x00, 0x00, 0x00, 0x40}; // 106kbpsParams(6byte)
+    
+    memcpy(&command[ 0], start,     2);
+    memcpy(&command[ 2], activated, 1);
+    memcpy(&command[ 3], params106, 6);
+    memcpy(&command[ 9], idm,       8); // NFCID2t(IDm)
+    memcpy(&command[17], pmm,       8); // PAD(PMm)
+    memcpy(&command[25], rfu,       2); // RFU(System Code)
+    memcpy(&command[27], idm,       8); // NFCID3t(IDm)
+    
+    ret = rwCommand(command, 37, response, &responseLen);
+    if (!ret || (responseLen != 2) ||
+        (memcmp(response, "\xd5\x8d", 2) != 0)) {
+        return 0;
+    }
+
+    return 1;
+}
+
 int RCS620S::polling(uint16_t systemCode)
 {
     int ret;
@@ -321,6 +349,21 @@ int RCS620S::push(
     }
 
     delay(1000);
+
+    return 1;
+}
+
+int RCS620S::reset(void)
+{
+    int ret;
+    uint8_t response[RCS620S_MAX_RW_RESPONSE_LEN];
+    uint16_t responseLen;
+
+    ret = rwCommand((const uint8_t*)"\xd4\x18\x01", 3, response, &responseLen);
+    if (!ret || (responseLen != 2) ||
+        (memcmp(response, "\xd5\x19", 2) != 0)) {
+        return 0;
+    }
 
     return 1;
 }
